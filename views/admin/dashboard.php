@@ -1,10 +1,17 @@
 <?php
 // ===== Guard & DB =====
 session_start();
+
+// Cegah cache
+header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+header('Pragma: no-cache');
+header('Expires: 0');
+
 if (!isset($_SESSION['login']) || $_SESSION['role'] !== 'admin') {
     header('Location: ../auth/login.php');
     exit;
 }
+
 require_once '../../config/database.php'; // $conn = new mysqli(...)
 
 // ===== Helper count aman =====
