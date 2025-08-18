@@ -1,0 +1,21 @@
+# Direktori vendor
+/vendor/
+
+# File .env
+.env
+.env.*
+
+# File log
+*.log
+
+# File cache
+/cache/
+/tmp/
+
+# File yang dihasilkan oleh IDE (misalnya, PHPStorm)
+.idea/
+*.swp
+*~
+
+# File konfigurasi IDE
+.vscode/
