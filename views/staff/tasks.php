@@ -161,7 +161,7 @@ unset($_SESSION['flash']);
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Manajemen Tugas - Staff</title>
+    <title>SIMTIB</title>
     <!-- icon -->
     <link rel="icon" href="../../public/assets/img/bawaslu.png" type="image/svg+xml">
     <!-- Tailwind -->

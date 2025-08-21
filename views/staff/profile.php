@@ -209,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Profil - Staff</title>
+    <title>SIMTIB</title>
     <link rel="icon" href="../../public/assets/img/bawaslu.png" type="image/svg+xml">
     <!-- Tailwind (browser build) -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4" defer></script>

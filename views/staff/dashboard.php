@@ -156,7 +156,7 @@ function e($v)
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Dashboard Staff</title>
+    <title>SIMTIB</title>
     <link rel="icon" href="../../public/assets/img/bawaslu.png" type="image/svg+xml">
 
     <!-- Tailwind (browser build) -->
