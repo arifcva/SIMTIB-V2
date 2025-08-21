@@ -50,6 +50,17 @@ $csrf = $_SESSION['csrf'];
 $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : 0;
 
 /******************************
+ *  Unread Notifications Count (untuk badge)
+ ******************************/
+$unreadCount = 0;
+$st = $conn->prepare("SELECT COUNT(*) FROM notifications WHERE user_id=? AND status='unread'");
+$st->bind_param('i', $userId);
+$st->execute();
+$st->bind_result($unreadCount);
+$st->fetch();
+$st->close();
+
+/******************************
  *  Helpers
  ******************************/
 function e($v)
@@ -252,8 +263,6 @@ unset($_SESSION['flash']);
             }
         }
 
-        /* hide drawer on lg+ */
-
         /* Card, fields, buttons */
         .card {
             background: var(--paper);
@@ -306,7 +315,7 @@ unset($_SESSION['flash']);
             border-color: #0a0a0a;
         }
 
-        /* Badge status */
+        /* Badge status tugas */
         .task-status {
             color: #fff;
             padding: .375rem .625rem;
@@ -340,6 +349,38 @@ unset($_SESSION['flash']);
             padding: .625rem 1rem;
             white-space: nowrap;
         }
+
+        /* ===== Badge jumlah notifikasi – sesuai referensi (ukuran tetap & tidak dorong sidebar) ===== */
+        .badge {
+            min-width: 1.5rem;
+            /* 24px */
+            height: 1.5rem;
+            /* 24px */
+            line-height: 1.5rem;
+            padding: 0 .5rem;
+            /* tampung 2+ digit */
+            border-radius: 9999px;
+            /* pil */
+            font-size: .75rem;
+            /* 12px */
+            text-align: center;
+            background: #111;
+            /* hitam */
+            color: #fff;
+            border: 1px solid #111;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            /* jangan melar/menyusut */
+        }
+
+        /* Saat link aktif (bg hitam), badge otomatis di-invert agar kontras */
+        .slink.active .badge {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
     </style>
 </head>
 
@@ -353,7 +394,21 @@ unset($_SESSION['flash']);
                 <li><a href="dashboard.php" class="slink"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                 <li><a href="tasks.php" class="slink active"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
                 <li><a href="user-activity.php" class="slink"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                <li><a href="notifications.php" class="slink"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
+
+                <!-- Notifikasi dengan badge jumlah unread (sidebar) -->
+                <li>
+                    <a href="notifications.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center">
+                            <i class="fas fa-bell mr-3"></i>Notifikasi
+                        </span>
+                        <?php if ((int)$unreadCount > 0): ?>
+                            <span class="badge shrink-0" aria-label="Notifikasi belum dibaca">
+                                <?= (int)$unreadCount ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+
                 <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
             </ul>
             <form action='../../controllers/logout.php' method='POST' class="mt-6">
@@ -374,7 +429,21 @@ unset($_SESSION['flash']);
                     <li><a href="dashboard.php" class="slink"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                     <li><a href="tasks.php" class="slink active"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
                     <li><a href="user-activity.php" class="slink"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                    <li><a href="notifications.php" class="slink"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
+
+                    <!-- Notifikasi dengan badge jumlah unread (drawer) -->
+                    <li>
+                        <a href="notifications.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center">
+                                <i class="fas fa-bell mr-3"></i>Notifikasi
+                            </span>
+                            <?php if ((int)$unreadCount > 0): ?>
+                                <span class="badge shrink-0" aria-label="Notifikasi belum dibaca">
+                                    <?= (int)$unreadCount ?>
+                                </span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+
                     <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
                 </ul>
                 <form action='../../controllers/logout.php' method='POST' class="mt-6">

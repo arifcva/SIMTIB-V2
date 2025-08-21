@@ -75,10 +75,9 @@ function action_badge(string $action): array
 {
     $a = strtolower($action);
     if ($a === 'login' || $a === 'logout') return ['Login/Logout', 'activity-login'];
-    if ($a === 'create') return ['Edit', 'activity-task'];
+    if ($a === 'create') return ['Edit',   'activity-task'];
     if ($a === 'update') return ['Update', 'activity-task'];
     if ($a === 'delete') return ['Delete', 'activity-comment']; // merah
-    // default
     return [ucfirst($a), 'activity-task'];
 }
 
@@ -117,6 +116,18 @@ while ($row = $res->fetch_assoc()) {
     ];
 }
 $st->close();
+
+/******************************
+ * Hitung jumlah notifikasi unread (untuk badge di sidebar)
+ ******************************/
+$unreadCount = 0;
+$st = $conn->prepare("SELECT COUNT(*) FROM notifications WHERE user_id=? AND status='unread'");
+$st->bind_param('i', $userId);
+$st->execute();
+$st->bind_result($unreadCount);
+$st->fetch();
+$st->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -177,12 +188,42 @@ $st->close();
             color: inherit;
         }
 
-        /* ikon ikut warna link */
         .slink.active .fas {
             color: #fff !important;
         }
 
-        /* ikon putih saat active */
+        /* Badge bulat hitam (ukuran tetap, tidak mendorong sidebar) */
+        .badge {
+            min-width: 1.5rem;
+            /* 24px */
+            height: 1.5rem;
+            /* 24px */
+            line-height: 1.5rem;
+            padding: 0 .5rem;
+            /* muat 2+ digit */
+            border-radius: 9999px;
+            /* pil */
+            font-size: .75rem;
+            /* 12px */
+            text-align: center;
+            background: #111;
+            /* hitam */
+            color: #fff;
+            border: 1px solid #111;
+            display: inline-flex;
+            /* pusatkan isi secara fleksibel */
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            /* jangan melar/menyusut */
+        }
+
+        /* Saat menu aktif (background hitam), badge di-invert agar tetap kontras */
+        .slink.active .badge {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
 
         /* Drawer mobile */
         .drawer {
@@ -270,17 +311,17 @@ $st->close();
             background-color: #16A34A;
         }
 
-        /* hijau untuk login/logout */
+        /* hijau */
         .activity-task {
             background-color: #9CA3AF;
         }
 
-        /* abu untuk create/update */
+        /* abu */
         .activity-comment {
             background-color: #DC2626;
         }
 
-        /* merah untuk delete/critical */
+        /* merah */
 
         /* Table */
         .table-wrap {
@@ -309,7 +350,15 @@ $st->close();
                 <li><a href="dashboard.php" class="slink"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                 <li><a href="tasks.php" class="slink"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
                 <li><a href="user-activity.php" class="slink active"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                <li><a href="notifications.php" class="slink"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
+                <li>
+                    <!-- Notifikasi dengan badge jumlah unread -->
+                    <a href="notifications.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center"><i class="fas fa-bell mr-3"></i>Notifikasi</span>
+                        <?php if ($unreadCount > 0): ?>
+                            <span class="badge shrink-0"><?= (int)$unreadCount ?></span>
+                        <?php endif; ?>
+                    </a>
+                </li>
                 <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
             </ul>
             <form action='../../controllers/logout.php' method='POST' class="mt-6">
@@ -330,7 +379,15 @@ $st->close();
                     <li><a href="dashboard.php" class="slink"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                     <li><a href="tasks.php" class="slink"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
                     <li><a href="user-activity.php" class="slink active"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                    <li><a href="notifications.php" class="slink"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
+                    <li>
+                        <!-- Notifikasi dengan badge jumlah unread (drawer) -->
+                        <a href="notifications.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center"><i class="fas fa-bell mr-3"></i>Notifikasi</span>
+                            <?php if ($unreadCount > 0): ?>
+                                <span class="badge shrink-0"><?= (int)$unreadCount ?></span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
                     <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
                 </ul>
                 <form action='../../controllers/logout.php' method='POST' class="mt-6">
@@ -382,14 +439,12 @@ $st->close();
                                         $time = date('Y-m-d H:i', strtotime($r['time']));
                                         $name = $r['name']; // bisa null kalau bukan 'tasks'
                                         [$statusText, $statusClass] = action_badge($r['action']);
-
-                                        // Bangun deskripsi:
-                                        // "Melakukan update pada Tugas <Nama Entitas>" (pakai nama kalau ada, kalau tidak pakai label tabel saja)
-                                        $desc = "Melakukan " . ucfirst($r['action']) . " pada " . $tbl . ($name ? " " . e($name) : "");
+                                        // bangun deskripsi lalu escape saat cetak (hindari double-escape)
+                                        $desc = "Melakukan " . ucfirst($r['action']) . " pada " . $tbl . ($name ? " " . $name : "");
                                     ?>
                                         <tr class="border-b">
                                             <td class="py-2 px-4"><?= $no++ ?></td>
-                                            <td class="py-2 px-4"><?= $desc ?></td>
+                                            <td class="py-2 px-4"><?= e($desc) ?></td>
                                             <td class="py-2 px-4"><?= e($time) ?></td>
                                             <td class="py-2 px-4">
                                                 <span class="activity-status <?= e($statusClass) ?>"><?= e($statusText) ?></span>

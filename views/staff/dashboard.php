@@ -33,6 +33,16 @@ $csrf = $_SESSION['csrf'];
 // ====== User Context ======
 $userId = isset($_SESSION['user_id']) ? (int)$_SESSION['user_id'] : null;
 
+// ====== Unread notifications count ======
+$unreadCount = 0;
+$st = $conn->prepare("SELECT COUNT(*) FROM notifications WHERE user_id=? AND status='unread'");
+$userIdForQuery = $userId ?? 0;
+$st->bind_param('i', $userIdForQuery);
+$st->execute();
+$st->bind_result($unreadCount);
+$st->fetch();
+$st->close();
+
 // ====== Stats (dinamis, difilter untuk staff) ======
 $stats = ['total' => 0, 'completed' => 0, 'in_progress' => 0, 'pending' => 0];
 if ($userId) {
@@ -113,9 +123,9 @@ while ($st->fetch()) {
     $logs[] = [
         'action' => $a,
         'table'  => $t,
-        'id'     => (int)$i,       // masih disimpan kalau butuh fallback/debug
+        'id'     => (int)$i,       // fallback/debug
         'time'   => $c,
-        'name'   => $ename         // bisa null jika bukan tabel 'tasks'
+        'name'   => $ename         // null jika bukan tabel 'tasks'
     ];
 }
 $st->close();
@@ -299,6 +309,38 @@ function e($v)
             height: 280px !important;
             display: block;
         }
+
+        /* ===== Badge jumlah notifikasi – ukuran tetap (sesuai referensi) ===== */
+        .badge {
+            min-width: 1.5rem;
+            /* 24px */
+            height: 1.5rem;
+            /* 24px */
+            line-height: 1.5rem;
+            padding: 0 .5rem;
+            /* muat 2+ digit */
+            border-radius: 9999px;
+            /* pil */
+            font-size: .75rem;
+            /* 12px */
+            text-align: center;
+            background: #111;
+            /* hitam */
+            color: #fff;
+            border: 1px solid #111;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            /* jangan melar/menyusut */
+        }
+
+        /* Invert saat link aktif (bg hitam) agar tetap kontras */
+        .slink.active .badge {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
+        }
     </style>
 </head>
 
@@ -312,7 +354,21 @@ function e($v)
                 <li><a href="dashboard.php" class="slink active"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                 <li><a href="tasks.php" class="slink"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
                 <li><a href="user-activity.php" class="slink"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                <li><a href="notifications.php" class="slink"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
+
+                <!-- Notifikasi dengan badge jumlah unread (sidebar) -->
+                <li>
+                    <a href="notifications.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center">
+                            <i class="fas fa-bell mr-3"></i>Notifikasi
+                        </span>
+                        <?php if ((int)$unreadCount > 0): ?>
+                            <span class="badge shrink-0" aria-label="Notifikasi belum dibaca">
+                                <?= (int)$unreadCount ?>
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+
                 <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
             </ul>
             <form action='../../controllers/logout.php' method='POST' class="mt-6">
@@ -333,8 +389,22 @@ function e($v)
                     <li><a href="dashboard.php" class="slink active"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
                     <li><a href="tasks.php" class="slink"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
                     <li><a href="user-activity.php" class="slink"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                    <li><a href="notifications.php" class="slink"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
-                    <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
+
+                    <!-- Notifikasi dengan badge jumlah unread (drawer) -->
+                    <li>
+                        <a href="notifications.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center">
+                                <i class="fas fa-bell mr-3"></i>Notifikasi
+                            </span>
+                            <?php if ((int)$unreadCount > 0): ?>
+                                <span class="badge shrink-0" aria-label="Notifikasi belum dibaca">
+                                    <?= (int)$unreadCount ?>
+                                </span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+
+                    <li><a href="profile.php" class="slink"><i class="fas a-user mr-3"></i>Profil</a></li>
                 </ul>
                 <form action='../../controllers/logout.php' method='POST' class="mt-6">
                     <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
@@ -401,7 +471,6 @@ function e($v)
                                 <?php foreach ($logs as $r):
                                     $tbl   = table_label_staff($r['table']);
                                     $time  = date('Y-m-d H:i', strtotime($r['time']));
-                                    // nama entitas (untuk tasks = title). Jika null, tampilkan label tabel saja.
                                     $entityName = $r['name'] ?: null;
                                 ?>
                                     <li class="py-3 flex justify-between items-start">
@@ -409,7 +478,6 @@ function e($v)
                                             <i class="fas fa-info-circle mt-1"></i>
                                             <div>
                                                 <div class="font-medium">
-                                                    <!-- Hasil: Melakukan update pada Tugas Penyusunan Laporan -->
                                                     Melakukan <span class="capitalize"><?= e($r['action']) ?></span>
                                                     pada <span class="capitalize"><?= e($tbl) ?></span>
                                                     <?php if ($entityName): ?>
@@ -473,7 +541,6 @@ function e($v)
             const notFinished = Math.max(0, total - done);
 
             const ctx = document.getElementById('taskStatusChart').getContext('2d');
-            // Set default setelah library tersedia
             Chart.defaults.devicePixelRatio = 1;
 
             new Chart(ctx, {

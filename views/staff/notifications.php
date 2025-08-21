@@ -53,13 +53,7 @@ function e($v)
 }
 function notif_card_class(string $status): string
 {
-    // Monokrom + aksen: unread = hitam/hijau lembut; read = abu-abu lebih redup
-    $status = strtolower($status);
-    if ($status === 'unread') {
-        // gunakan aksen gelap agar konsisten monokrom
-        return 'notification-unread';
-    }
-    return 'notification-read';
+    return strtolower($status) === 'unread' ? 'notification-unread' : 'notification-read';
 }
 
 /******************************
@@ -68,7 +62,7 @@ function notif_card_class(string $status): string
 $flash = null;
 
 /* Tandai satu notifikasi dibaca */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'mark_read') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'mark_read') {
     if (!isset($_POST['csrf']) || !hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'])) {
         $flash = ['type' => 'error', 'msg' => 'CSRF tidak valid.'];
     } else {
@@ -84,7 +78,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 }
 
 /* Tandai semua notifikasi dibaca */
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'mark_all_read') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'mark_all_read') {
     if (!isset($_POST['csrf']) || !hash_equals($_SESSION['csrf'] ?? '', $_POST['csrf'])) {
         $flash = ['type' => 'error', 'msg' => 'CSRF tidak valid.'];
     } else {
@@ -119,7 +113,7 @@ while ($st->fetch()) {
 }
 $st->close();
 
-// Hitung unread untuk tombol "Tandai Semua Dibaca"
+/* Hitung unread untuk badge & tombol */
 $unreadCount = 0;
 foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
 ?>
@@ -184,6 +178,38 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
 
         .slink.active .fas {
             color: #fff !important;
+        }
+
+        /* ===== Badge jumlah notif – ukuran tetap & tidak mendorong sidebar (sesuai referensi) ===== */
+        .badge {
+            min-width: 1.5rem;
+            /* 24px */
+            height: 1.5rem;
+            /* 24px */
+            line-height: 1.5rem;
+            padding: 0 .5rem;
+            /* muat 2+ digit */
+            border-radius: 9999px;
+            font-size: .75rem;
+            /* 12px */
+            text-align: center;
+            background: #111;
+            /* hitam */
+            color: #fff;
+            border: 1px solid #111;
+            display: inline-flex;
+            /* pusatkan angka dengan fleksibel */
+            align-items: center;
+            justify-content: center;
+            flex: 0 0 auto;
+            /* jangan melar/menyusut */
+        }
+
+        /* Saat menu aktif, invert agar kontras di background hitam */
+        .slink.active .badge {
+            background: #fff;
+            color: #000;
+            border-color: #fff;
         }
 
         /* Drawer mobile */
@@ -271,19 +297,17 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
             border-color: #0a0a0a;
         }
 
-        /* Kartu notifikasi (monokrom + aksen) */
+        /* Kartu notifikasi */
         .notification-unread {
             background-color: #111827;
             color: #fff;
         }
 
-        /* gelap untuk unread */
         .notification-read {
             background-color: #e5e7eb;
             color: #111;
         }
 
-        /* abu terang untuk read */
         .notification-unread .meta,
         .notification-read .meta {
             opacity: .9;
@@ -294,7 +318,6 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
             opacity: .9;
         }
 
-        /* Chip status kecil (opsional) */
         .chip {
             font-size: .75rem;
             padding: .125rem .5rem;
@@ -315,11 +338,37 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
         <aside class="sidebar p-4 h-full overflow-y-auto hidden lg:block">
             <h2 class="flex justify-center text-xl sidebar-title mb-6">SIMTIB</h2>
             <ul class="space-y-1">
-                <li><a href="dashboard.php" class="slink"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
-                <li><a href="tasks.php" class="slink"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
-                <li><a href="user-activity.php" class="slink"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                <li><a href="notifications.php" class="slink active"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
-                <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
+                <li>
+                    <a href="dashboard.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="tasks.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="user-activity.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</span>
+                    </a>
+                </li>
+                <li>
+                    <a href="notifications.php" class="slink active flex items-center justify-between">
+                        <span class="inline-flex items-center"><i class="fas fa-bell mr-3"></i>Notifikasi</span>
+                        <?php if ($unreadCount > 0): ?>
+                            <span class="badge shrink-0" aria-label="Notifikasi belum dibaca">
+                                <?= (int)$unreadCount ?>
+                                <!-- atau gunakan: <?= (int)$unreadCount > 99 ? '99+' : (int)$unreadCount ?> -->
+                            </span>
+                        <?php endif; ?>
+                    </a>
+                </li>
+                <li>
+                    <a href="profile.php" class="slink flex items-center justify-between">
+                        <span class="inline-flex items-center"><i class="fas fa-user mr-3"></i>Profil</span>
+                    </a>
+                </li>
             </ul>
             <form action='../../controllers/logout.php' method='POST' class="mt-6">
                 <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
@@ -336,11 +385,37 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
                     <button id="drawerClose" class="btn btn-outline px-2 py-1"><i class="fas fa-times"></i></button>
                 </h2>
                 <ul class="space-y-1">
-                    <li><a href="dashboard.php" class="slink"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</a></li>
-                    <li><a href="tasks.php" class="slink"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</a></li>
-                    <li><a href="user-activity.php" class="slink"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</a></li>
-                    <li><a href="notifications.php" class="slink active"><i class="fas fa-bell mr-3"></i>Notifikasi</a></li>
-                    <li><a href="profile.php" class="slink"><i class="fas fa-user mr-3"></i>Profil</a></li>
+                    <li>
+                        <a href="dashboard.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center"><i class="fas fa-tachometer-alt mr-3"></i>Dashboard</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="tasks.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center"><i class="fas fa-tasks mr-3"></i>Manajemen Tugas</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="user-activity.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center"><i class="fas fa-users mr-3"></i>Aktivitas Pengguna</span>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="notifications.php" class="slink active flex items-center justify-between">
+                            <span class="inline-flex items-center"><i class="fas fa-bell mr-3"></i>Notifikasi</span>
+                            <?php if ($unreadCount > 0): ?>
+                                <span class="badge shrink-0" aria-label="Notifikasi belum dibaca">
+                                    <?= (int)$unreadCount ?>
+                                    <!-- atau gunakan: <?= (int)$unreadCount > 99 ? '99+' : (int)$unreadCount ?> -->
+                                </span>
+                            <?php endif; ?>
+                        </a>
+                    </li>
+                    <li>
+                        <a href="profile.php" class="slink flex items-center justify-between">
+                            <span class="inline-flex items-center"><i class="fas fa-user mr-3"></i>Profil</span>
+                        </a>
+                    </li>
                 </ul>
                 <form action='../../controllers/logout.php' method='POST' class="mt-6">
                     <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
@@ -372,7 +447,9 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
                             <form method="POST" class="inline-flex">
                                 <input type="hidden" name="csrf" value="<?= e($csrf) ?>">
                                 <input type="hidden" name="action" value="mark_all_read">
-                                <button type="submit" class="btn btn-black">Tandai Semua Dibaca (<?= (int)$unreadCount ?>)</button>
+                                <button type="submit" class="btn btn-black">
+                                    Tandai Semua Dibaca (<?= (int)$unreadCount ?>)
+                                </button>
                             </form>
                         <?php endif; ?>
                     </div>
@@ -390,7 +467,9 @@ foreach ($notifs as $n) if ($n['status'] === 'unread') $unreadCount++;
                             <?php foreach ($notifs as $n): ?>
                                 <div class="flex items-center justify-between p-4 rounded-lg border <?= e(notif_card_class($n['status'])) ?>">
                                     <div class="flex-1 pr-4">
-                                        <p class="font-medium <?= $n['status'] === 'unread' ? 'text-white' : 'text-gray-800' ?>"><?= e($n['message']) ?></p>
+                                        <p class="font-medium <?= $n['status'] === 'unread' ? 'text-white' : 'text-gray-800' ?>">
+                                            <?= e($n['message']) ?>
+                                        </p>
                                         <p class="meta <?= $n['status'] === 'unread' ? 'text-gray-200' : 'text-gray-600' ?>">
                                             <span class="chip <?= $n['status'] === 'unread' ? 'text-white' : 'text-gray-700' ?>">
                                                 <?= $n['status'] === 'unread' ? 'Belum dibaca' : 'Sudah dibaca' ?>
